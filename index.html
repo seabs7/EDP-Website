@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Equipment Design & Planning Inc.</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css">
+<script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
+<script>
+  window.APS_API_BASE = 'https://edp-aps-server.onrender.com';
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -329,19 +337,57 @@
   .admin-tab-btn { padding: 8px 20px; border: none; background: transparent; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
   .admin-tab-btn.active { background: var(--navy); color: white; }
 
+  /* ======= CONFIGURATOR ======= */
+  .configurator-container { display: grid; grid-template-columns: 1fr 380px; gap: 32px; max-width: 1400px; margin: 0 auto; padding: 40px 24px; }
+  .config-canvas-wrap { position: relative; }
+  .controls-hint { position: static; display: inline-block; margin: 0 0 8px; background: rgba(255,255,255,0.85); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 11px; color: var(--muted); letter-spacing: 0.02em; box-shadow: 0 4px 12px rgba(13,27,62,0.08); }
+  #apsViewer { width: 100%; aspect-ratio: 1; background: #f5f5f0; border-radius: 12px; border: 2px solid var(--border); box-shadow: 0 8px 32px rgba(13,27,62,0.1); overflow: hidden; }
+  #configuratorCanvas { display: none; }
+  .controls-hint { position: absolute; left: 12px; bottom: 12px; background: rgba(255,255,255,0.85); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 11px; color: var(--muted); letter-spacing: 0.02em; box-shadow: 0 4px 12px rgba(13,27,62,0.08); }
+  .config-panel { background: white; border-radius: 12px; border: 2px solid var(--border); padding: 24px; box-shadow: 0 4px 16px rgba(13,27,62,0.08); }
+  .config-section { margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+  .config-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .config-label { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--navy); margin-bottom: 12px; display: block; }
+  .config-select, .config-select-group { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'Barlow', sans-serif; font-size: 14px; color: var(--text); background: var(--white); cursor: pointer; outline: none; transition: border-color 0.2s; margin-bottom: 8px; }
+  .config-select:focus { border-color: var(--navy); }
+  .config-button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .config-btn { padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; background: white; color: var(--text); font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.05em; }
+  .config-btn:hover { border-color: var(--navy); color: var(--navy); }
+  .config-btn.active { background: var(--navy); color: white; border-color: var(--navy); }
+  .color-picker-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+  .color-swatch { width: 100%; aspect-ratio: 1; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .color-swatch:hover { transform: scale(1.05); }
+  .color-swatch.active { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(74,127,212,0.2); }
+  .ral-color-input { display: flex; gap: 8px; }
+  .ral-color-input input { flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'Barlow', sans-serif; }
+  .ral-color-input button { padding: 10px 16px; background: var(--navy); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+  .ral-color-input button:hover { background: var(--accent); }
+  .config-info { background: var(--silver-light); border-radius: 8px; padding: 14px; font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 8px; }
+  .price-display { background: rgba(74,127,212,0.08); border-radius: 8px; padding: 12px; margin-bottom: 16px; text-align: center; }
+  .price-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .price-value { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; color: var(--navy); }
+  .leadtime-display { background: rgba(39,174,96,0.08); border-radius: 8px; padding: 12px; margin-bottom: 16px; text-align: center; }
+  .leadtime-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .leadtime-value { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; color: var(--green); }
+  .save-config-btn { width: 100%; padding: 14px; background: var(--navy); color: white; border: none; border-radius: 8px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; margin-bottom: 8px; }
+  .save-config-btn:hover { background: var(--accent); }
+  .add-to-cart-btn { width: 100%; padding: 14px; background: var(--green); color: white; border: none; border-radius: 8px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+  .add-to-cart-btn:hover { background: #1e8449; }
+
   @media (max-width: 768px) {
     .hero h1 { font-size: 40px; }
     .header-search { display: none; }
     .table-head.orders-cols, .table-row.orders-cols { grid-template-columns: 70px 1fr 100px 90px; }
     .table-head.orders-cols span:nth-child(5), .table-head.orders-cols span:nth-child(6),
     .table-row.orders-cols span:nth-child(5), .table-row.orders-cols span:nth-child(6) { display: none; }
+    .configurator-container { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
 
 <!-- ===== LOGIN SCREEN ===== -->
-<div class="login-screen" id="loginScreen">
+<div class="login-screen hidden" id="loginScreen">
   <div class="login-box">
     <div class="login-header">
       <div class="login-logo-main">Equipment Design</div>
@@ -390,7 +436,7 @@
 </div>
 
 <!-- ===== MAIN SITE ===== -->
-<div id="mainSite" style="display:none">
+<div id="mainSite">
 
 <div class="topbar">🚚 Free shipping on orders over $2,500 &nbsp;|&nbsp; Call us: (800) 555-0192 &nbsp;|&nbsp; Mon–Fri 8am–6pm EST</div>
 
@@ -413,6 +459,10 @@
       <button id="portalHeaderBtn" style="display:none" onclick="showCustomerPortal()">
         <span class="icon">📦</span>
         <span>My Orders</span>
+      </button>
+      <button id="signInBtn" class="cart-btn" onclick="document.getElementById('loginScreen').classList.remove('hidden');">
+        <span class="icon">🔐</span>
+        <span>Sign In</span>
       </button>
       <button class="cart-btn" onclick="toggleCart()">
         <span class="icon">🛒</span>
@@ -443,7 +493,8 @@
       <h1>Professional <span>Restaurant</span><br>Equipment</h1>
       <p>Commercial-grade equipment designed for the demands of modern foodservice operations.</p>
       <div class="hero-btns">
-        <button class="btn-primary" onclick="setFilter('All')">Shop All Equipment</button>
+        <button class="btn-primary" onclick="showStorefront();setFilter('All')">Shop All Equipment</button>
+        <button class="btn-outline" onclick="showConfigurator()">🎨 3D Configurator</button>
         <button class="btn-outline" id="heroAdminBtn" style="display:none" onclick="showAdminDash()">⚙️ Admin Dashboard</button>
         <button class="btn-outline" id="heroPortalBtn" style="display:none" onclick="showCustomerPortal()">📦 My Account</button>
       </div>
@@ -489,6 +540,89 @@
   </div>
 </div>
 
+<!-- ===== CONFIGURATOR ===== -->
+<div id="configuratorView" style="display:none">
+  <div class="page">
+    <div class="section-header">
+      <h2 class="section-title">3D Equipment Configurator</h2>
+      <button class="btn-primary" onclick="showStorefront()" style="margin-left: auto;">← Back to Storefront</button>
+    </div>
+    <div class="configurator-container">
+      <div class="config-canvas-wrap">
+        <div class="controls-hint">Drag to pan · Scroll to zoom · Use viewer toolbar</div>
+        <div id="apsViewer"></div>
+      </div>
+      <div class="config-panel">
+        <!-- QUICK TEST LOADER -->
+        <div class="config-section" style="background:#fff3cd;border:2px dashed #ffc107;border-radius:8px;padding:16px;margin-bottom:16px;">
+          <label class="config-label" style="color:#856404;font-size:14px;margin-bottom:8px;">🧪 Quick Test: Load DWG</label>
+          <div style="margin-bottom:10px;font-size:13px;color:#856404;line-height:1.4;">Upload your DWG file to view it in Autodesk Viewer (skips admin upload)</div>
+          <input type="file" id="testModelInput" accept=".dwg" style="display:none;" onchange="uploadDwgForViewer(event)">
+          <button class="config-btn" style="width:100%;background:#ffc107;color:#000;font-weight:600;" onclick="document.getElementById('testModelInput').click()">📁 Choose DWG to Test</button>
+          <div id="testStatus" style="margin-top:8px;font-size:13px;color:#856404;font-weight:600;"></div>
+        </div>
+
+        <div class="config-section">
+          <label class="config-label">Select Equipment</label>
+          <select class="config-select" id="modelSelect" onchange="updateConfigurator()">
+            <option value="">Choose a model...</option>
+          </select>
+        </div>
+
+        <div class="config-section" id="sizeSection" style="display:none;">
+          <label class="config-label">Width Size (mm)</label>
+          <div class="config-button-group">
+            <button class="config-btn" data-size="850" onclick="setSizeOption(this)">850</button>
+            <button class="config-btn" data-size="1250" onclick="setSizeOption(this)">1250</button>
+            <button class="config-btn" data-size="1650" onclick="setSizeOption(this)">1650</button>
+            <button class="config-btn" data-size="2050" onclick="setSizeOption(this)">2050</button>
+          </div>
+        </div>
+
+        <div class="config-section" id="quantitySection" style="display:none;">
+          <label class="config-label">Quantity</label>
+          <div class="config-button-group" id="quantityButtons">
+            <button class="config-btn" data-qty="1" onclick="setQuantityOption(this)">1</button>
+            <button class="config-btn" data-qty="2" onclick="setQuantityOption(this)">2</button>
+            <button class="config-btn" data-qty="3" onclick="setQuantityOption(this)">3</button>
+            <button class="config-btn" data-qty="4" onclick="setQuantityOption(this)">4</button>
+          </div>
+          <div class="config-button-group" style="margin-top:8px;">
+            <button class="config-btn" id="channeledBtn" onclick="toggleChanneled(this)">Channeled</button>
+          </div>
+        </div>
+
+        <div class="config-section" id="panelColorSection" style="display:none;">
+          <label class="config-label">Panel Color (RAL)</label>
+          <div class="color-picker-grid" id="colorPickerGrid"></div>
+          <div class="ral-color-input">
+            <input type="text" id="ralInput" placeholder="Enter RAL code (e.g. 9005, 1028)">
+            <button onclick="applyCustomRalColor()">Apply</button>
+          </div>
+        </div>
+
+        <div class="config-section" id="customOptionsSection" style="display:none;">
+          <label class="config-label">Customizations</label>
+          <div id="customOptionsContainer"></div>
+        </div>
+
+        <div class="config-section">
+          <div class="price-display">
+            <div class="price-label">Configured Price</div>
+            <div class="price-value">$<span id="configPrice">0</span></div>
+          </div>
+          <div class="leadtime-display">
+            <div class="leadtime-label">Lead Time</div>
+            <div class="leadtime-value"><span id="configLeadtime">-</span></div>
+          </div>
+          <button class="save-config-btn" onclick="saveConfiguration()">💾 Save Configuration</button>
+          <button class="add-to-cart-btn" onclick="addConfigToCart()">🛒 Add to Cart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== ADMIN DASHBOARD ===== -->
 <div id="adminView" style="display:none">
   <div class="page">
@@ -504,6 +638,7 @@
 
     <div class="admin-tabs">
       <button class="admin-tab-btn active" onclick="switchAdminTab('products',this)">📦 Products</button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('3dmodels',this)">🎨 3D Models</button>
       <button class="admin-tab-btn" onclick="switchAdminTab('orders',this)">📋 Orders</button>
       <button class="admin-tab-btn" onclick="switchAdminTab('customers',this)">👥 Customers</button>
     </div>
@@ -595,6 +730,74 @@
           <span>#</span><span>Name / Email</span><span>Account ID</span><span>Orders</span><span>Status</span>
         </div>
         <div id="customersTableBody"></div>
+      </div>
+    </div>
+
+    <!-- 3D Models Tab -->
+    <div id="adminTab3dmodels" style="display:none">
+      <div style="background:#f0f4ff;border-left:4px solid var(--navy);padding:16px;margin-bottom:24px;border-radius:8px;">
+        <div style="font-weight:600;font-size:15px;margin-bottom:8px;color:var(--navy);">📦 3D Model Management</div>
+        <div style="font-size:13px;color:#666;line-height:1.6;">
+          Upload GLB/GLTF 3D models for your equipment products. Once uploaded, these models will be available 
+          in the <strong>Equipment Configurator</strong> dropdown for users to view and configure. 
+          Models are stored in browser localStorage and persist across sessions.
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <button class="btn-primary" onclick="openAdd3DModel()">+ Add 3D Model</button>
+      </div>
+
+      <div class="admin-panel" id="adminModel3DPanel" style="display:none">
+        <h2>🎨 Add/Edit 3D Model with Variants</h2>
+        
+        <h3 style="margin-top:20px;margin-bottom:12px;font-size:16px;color:var(--navy);">Base Model Details</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Model Name *</label>
+            <input type="text" id="model3dName" placeholder="e.g., Display Case 1200L">
+          </div>
+          <div class="form-group">
+            <label>Equipment Category</label>
+            <select id="model3dCategory">
+              <option value="">Select category...</option>
+              <option value="Display Cases">Display Cases</option>
+              <option value="Grab & Go">Grab & Go</option>
+              <option value="Cooking">Cooking</option>
+              <option value="Refrigeration">Refrigeration</option>
+            </select>
+            <small style="color:var(--muted);margin-top:4px;display:block;">Optional - defaults to "Uncategorized"</small>
+          </div>
+          <div class="form-group">
+            <label>Base Price ($)</label>
+            <input type="number" id="model3dPrice" placeholder="e.g., 4200">
+            <small style="color:var(--muted);margin-top:4px;display:block;">Optional - defaults to $0</small>
+          </div>
+          <div class="form-group">
+            <label>Lead Time (days)</label>
+            <input type="number" id="model3dLeadtime" placeholder="e.g., 14">
+            <small style="color:var(--muted);margin-top:4px;display:block;">Optional - defaults to 14 days</small>
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Base Model File (glTF/GLB) *</label>
+            <input type="file" id="model3dFile" accept=".glb,.gltf">
+            <small style="color:var(--muted);margin-top:4px;display:block;">Required - Main equipment 3D model file</small>
+          </div>
+        </div>
+
+        <h3 style="margin-top:24px;margin-bottom:12px;font-size:16px;color:var(--navy);">Customization Variants (Optional)</h3>
+        <div id="variantsList" style="margin-bottom:16px;"></div>
+        <button class="btn-outline" style="margin-bottom:16px;" onclick="addVariantGroup()">+ Add Customization Option</button>
+
+        <div style="display:flex;gap:8px;margin-top:24px;">
+          <button class="btn-primary" onclick="saveModel3DWithVariants()">Save Model & Variants</button>
+          <button class="btn-outline" onclick="closeAdd3DModel()">Cancel</button>
+        </div>
+      </div>
+
+      <div style="margin-top:32px;">
+        <h3 style="font-size:18px;margin-bottom:16px;color:var(--navy);">Available 3D Models</h3>
+        <div id="model3dList"></div>
       </div>
     </div>
   </div>
@@ -804,13 +1007,286 @@ function enterSite() {
   updateCart();
 }
 
+// ======= 3D MODEL MANAGEMENT =======
+let model3DData = {
+  'display-case-1': { file: '', fileName: 'display-case-1.glb' },
+  'grab-go-1': { file: '', fileName: 'grab-go-1.glb' }
+};
+
+// Restore model3DData from localStorage
+if (localStorage.getItem('model3DData')) {
+  try {
+    const savedData = JSON.parse(localStorage.getItem('model3DData'));
+    model3DData = { ...model3DData, ...savedData };
+    console.log('✓ Restored', Object.keys(savedData).length, '3D model files from storage');
+  } catch (e) {
+    console.warn('Could not restore model3DData from localStorage');
+  }
+}
+
+let currentVariantGroup = 0;
+let variantFiles = {}; // Track variant files being uploaded
+
+// Restore variantFiles from localStorage
+if (localStorage.getItem('variantFiles')) {
+  try {
+    variantFiles = JSON.parse(localStorage.getItem('variantFiles'));
+    console.log('✓ Restored', Object.keys(variantFiles).length, 'variant files from storage');
+  } catch (e) {
+    console.warn('Could not restore variantFiles from localStorage');
+  }
+}
+
+function openAdd3DModel() {
+  document.getElementById('adminModel3DPanel').style.display = 'block';
+  document.getElementById('model3dName').value = '';
+  document.getElementById('model3dCategory').value = '';
+  document.getElementById('model3dPrice').value = '';
+  document.getElementById('model3dLeadtime').value = '';
+  document.getElementById('model3dFile').value = '';
+  document.getElementById('variantsList').innerHTML = '';
+  currentVariantGroup = 0;
+  variantFiles = {};
+}
+
+function closeAdd3DModel() {
+  document.getElementById('adminModel3DPanel').style.display = 'none';
+}
+
+function addVariantGroup() {
+  const html = `
+    <div class="variant-group" id="variantGroup${currentVariantGroup}" style="border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;background:var(--silver-light);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <input type="text" placeholder="e.g., Glass Type, Door Configuration" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-weight:600;" class="variantGroupName" value="">
+        <button style="margin-left:8px;padding:6px 12px;background:var(--red);color:white;border:none;border-radius:6px;cursor:pointer;" onclick="removeVariantGroup(${currentVariantGroup})">Remove</button>
+      </div>
+      <div id="variantOptions${currentVariantGroup}" style="margin-top:12px;"></div>
+      <button style="margin-top:8px;padding:6px 12px;background:var(--navy);color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;" onclick="addVariantOption(${currentVariantGroup})">+ Add Option</button>
+    </div>
+  `;
+  document.getElementById('variantsList').innerHTML += html;
+  addVariantOption(currentVariantGroup);
+  currentVariantGroup++;
+}
+
+function addVariantOption(groupIdx) {
+  const optionIdx = Date.now();
+  const html = `
+    <div class="variant-option" id="variantOption${optionIdx}" style="background:white;padding:12px;border-radius:6px;margin-bottom:8px;border:1px solid var(--border);">
+      <div style="display:flex;gap:8px;align-items:end;">
+        <div style="flex:1;">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Option Name</label>
+          <input type="text" placeholder="e.g., High Glass" class="variantOptionName" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">Price Adjustment ($)</label>
+          <input type="number" placeholder="0" class="variantOptionPrice" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">3D File (glTF/GLB)</label>
+          <input type="file" accept=".glb,.gltf" class="variantOptionFile" style="padding:4px;font-size:11px;">
+        </div>
+        <button style="padding:6px 12px;background:var(--red);color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;white-space:nowrap;" onclick="document.getElementById('variantOption${optionIdx}').remove()">Delete</button>
+      </div>
+    </div>
+  `;
+  document.getElementById(`variantOptions${groupIdx}`).innerHTML += html;
+}
+
+function removeVariantGroup(groupIdx) {
+  document.getElementById(`variantGroup${groupIdx}`).remove();
+}
+
+function saveModel3DWithVariants() {
+  const name = document.getElementById('model3dName').value.trim();
+  const category = document.getElementById('model3dCategory').value || 'Uncategorized';
+  const price = parseFloat(document.getElementById('model3dPrice').value) || 0;
+  const leadtime = parseInt(document.getElementById('model3dLeadtime').value) || 14;
+  const baseFile = document.getElementById('model3dFile').files[0];
+  
+  // Only require name and file - everything else has defaults
+  if (!name) {
+    alert('Please enter a model name');
+    return;
+  }
+  
+  if (!baseFile) {
+    alert('Please select a 3D model file (.glb or .gltf)');
+    return;
+  }
+  
+  if (!baseFile.name.endsWith('.glb') && !baseFile.name.endsWith('.gltf')) {
+    alert('Base model must be a valid glTF (.glb or .gltf) file');
+    return;
+  }
+
+  // Read base file
+  const baseReader = new FileReader();
+  baseReader.onload = (baseEvent) => {
+    const modelId = 'model-' + Date.now();
+    
+    // Collect customization options
+    const customizations = [];
+    const variantGroups = document.querySelectorAll('.variant-group');
+    
+    variantGroups.forEach((group, groupIdx) => {
+      const groupName = group.querySelector('.variantGroupName').value || `Option Group ${groupIdx + 1}`;
+      const options = [];
+      
+      const optionDivs = group.querySelectorAll('.variant-option');
+      optionDivs.forEach((optDiv) => {
+        const optName = optDiv.querySelector('.variantOptionName').value;
+        const optPrice = parseFloat(optDiv.querySelector('.variantOptionPrice').value) || 0;
+        const optFile = optDiv.querySelector('.variantOptionFile').files[0];
+        
+        if (optName && optFile) {
+          // Read variant file
+          const variantReader = new FileReader();
+          variantReader.onload = (variantEvent) => {
+            const variantKey = `${modelId}_${groupIdx}_${optName}`;
+            variantFiles[variantKey] = {
+              file: variantEvent.target.result,
+              fileName: optFile.name,
+              optionName: optName,
+              groupName: groupName
+            };
+          };
+          variantReader.readAsDataURL(optFile);
+          
+          options.push({
+            id: optName.toLowerCase().replace(/\s+/g, '-'),
+            name: optName,
+            priceAdj: optPrice,
+            variantKey: `${modelId}_${groupIdx}_${optName}`
+          });
+        }
+      });
+      
+      if (options.length > 0) {
+        customizations.push({
+          id: groupName.toLowerCase().replace(/\s+/g, '-'),
+          name: groupName,
+          options: options
+        });
+      }
+    });
+
+    // Create model structure
+    const newModel = {
+      id: modelId,
+      name: name,
+      category: category,
+      basePrice: price,
+      leadTimeDays: leadtime,
+      widths: [850, 1250, 1650, 2050],
+      defaultWidth: 1250,
+      depth: 720,
+      height: 1200,
+      panelColors: ['9005', '9016', '1028', '5015'],
+      customizations: customizations,
+      baseModel: baseEvent.target.result,
+      baseFileName: baseFile.name,
+      uploadDate: new Date().toLocaleDateString(),
+      useGLTF: true  // Flag to load actual 3D models
+    };
+    
+    CONFIGURATOR_MODELS.push(newModel);
+    model3DData[modelId] = { file: baseEvent.target.result, fileName: baseFile.name };
+    
+    // Save to localStorage with error handling
+    try {
+      const modelsJson = JSON.stringify(CONFIGURATOR_MODELS);
+      const dataJson = JSON.stringify(model3DData);
+      const variantsJson = JSON.stringify(variantFiles);
+      
+      console.log('💾 Saving to localStorage:');
+      console.log('  Models JSON size:', (modelsJson.length / 1024 / 1024).toFixed(2), 'MB');
+      console.log('  Model3DData size:', (dataJson.length / 1024 / 1024).toFixed(2), 'MB');
+      console.log('  Variants size:', (variantsJson.length / 1024 / 1024).toFixed(2), 'MB');
+      
+      localStorage.setItem('configuratorModels', modelsJson);
+      localStorage.setItem('model3DData', dataJson);
+      localStorage.setItem('variantFiles', variantsJson);
+      
+      // Verify it was saved by reading it back
+      const verify = localStorage.getItem('configuratorModels');
+      if (verify && verify.length > 100) {
+        console.log('✅ Successfully saved to localStorage');
+        showToast(`✅ 3D Model "${name}" saved successfully!`);
+      } else {
+        console.error('⚠️ localStorage save appeared to fail or was truncated');
+        showToast(`⚠️ Model saved but may not persist. File may be too large for browser storage.`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to save to localStorage:', error);
+      if (error.name === 'QuotaExceededError') {
+        showToast(`❌ Model too large for browser storage (${(baseEvent.target.result.length / 1024 / 1024).toFixed(2)} MB). Try a smaller file.`);
+        alert(`Storage Error: The 3D model file is too large to save in browser storage.\n\nFile size: ${(baseEvent.target.result.length / 1024 / 1024).toFixed(2)} MB\nBrowser limit: ~5-10 MB\n\nPlease use a smaller/optimized 3D model file.`);
+      } else {
+        showToast(`❌ Failed to save model: ${error.message}`);
+      }
+    }
+    
+    closeAdd3DModel();
+    renderModel3DList();
+  };
+  baseReader.readAsDataURL(baseFile);
+}
+
+function renderModel3DList() {
+  const listDiv = document.getElementById('model3dList');
+  if (!CONFIGURATOR_MODELS.length) {
+    listDiv.innerHTML = '<p style="color:var(--muted);text-align:center;padding:32px;">No 3D models uploaded yet.</p>';
+    return;
+  }
+  
+  listDiv.innerHTML = CONFIGURATOR_MODELS.map(m => `
+    <div style="border:2px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;background:white;">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16px;color:var(--navy);margin-bottom:4px;">${m.name}</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Category: ${m.category} | Price: $${m.basePrice.toLocaleString()} | Lead Time: ${m.leadTimeDays} days</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Base Model: ${m.baseFileName || 'N/A'}</div>
+          ${m.customizations && m.customizations.length > 0 ? `
+            <div style="font-size:12px;color:var(--navy);font-weight:600;margin-top:8px;">Customization Options:</div>
+            <div style="font-size:12px;margin-left:12px;color:var(--muted);">
+              ${m.customizations.map(c => `
+                <div style="margin-top:4px;">
+                  <strong>${c.name}:</strong> ${c.options.map(o => o.name).join(', ')}
+                </div>
+              `).join('')}
+            </div>
+          ` : '<div style="font-size:12px;color:var(--muted);margin-top:8px;"><em>No customization variants</em></div>'}
+        </div>
+        <button class="admin-del-btn" onclick="deleteModel3D('${m.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteModel3D(modelId) {
+  if (!confirm('Are you sure you want to delete this 3D model?')) return;
+  
+  const idx = CONFIGURATOR_MODELS.findIndex(m => m.id === modelId);
+  if (idx > -1) {
+    CONFIGURATOR_MODELS.splice(idx, 1);
+    delete model3DData[modelId];
+    
+    localStorage.setItem('configuratorModels', JSON.stringify(CONFIGURATOR_MODELS));
+    localStorage.setItem('model3DData', JSON.stringify(model3DData));
+    
+    showToast('🗑 3D Model deleted');
+    renderModel3DList();
+  }
+}
+
 function setupUIForRole() {
   const r = currentUser.role;
 
   // User pill
   const wrap = document.getElementById('userPillWrap');
   if (r === 'guest') {
-    wrap.innerHTML = `<button onclick="document.getElementById('loginScreen').classList.remove('hidden'); document.getElementById('mainSite').style.display='none';" style="background:none;border:1.5px solid var(--border);padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;color:var(--navy);cursor:pointer;">Sign In</button>`;
+    wrap.innerHTML = `<button onclick="document.getElementById('loginScreen').classList.remove('hidden');" style="background:none;border:1.5px solid var(--border);padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;color:var(--navy);cursor:pointer;">Sign In</button>`;
   } else {
     const initials = currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase();
     wrap.innerHTML = `
@@ -826,6 +1302,7 @@ function setupUIForRole() {
   // Dashboard/portal buttons
   document.getElementById('adminHeaderBtn').style.display = r==='admin' ? 'flex' : 'none';
   document.getElementById('portalHeaderBtn').style.display = r==='customer' ? 'flex' : 'none';
+  document.getElementById('signInBtn').style.display = r==='guest' ? 'flex' : 'none';
 
   // Hero buttons
   document.getElementById('heroAdminBtn').style.display = r==='admin' ? 'inline-flex' : 'none';
@@ -860,6 +1337,7 @@ function showStorefront() {
   document.getElementById('storefrontView').style.display = 'block';
   document.getElementById('adminView').style.display = 'none';
   document.getElementById('customerPortalView').style.display = 'none';
+  document.getElementById('configuratorView').style.display = 'none';
 }
 function showAdminDash() {
   document.getElementById('storefrontView').style.display = 'none';
@@ -896,8 +1374,12 @@ function switchAdminTab(tab, btn) {
   document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   document.getElementById('adminTabProducts').style.display = tab==='products' ? 'block' : 'none';
+  document.getElementById('adminTab3dmodels').style.display = tab==='3dmodels' ? 'block' : 'none';
   document.getElementById('adminTabOrders').style.display = tab==='orders' ? 'block' : 'none';
   document.getElementById('adminTabCustomers').style.display = tab==='customers' ? 'block' : 'none';
+  if (tab === '3dmodels') {
+    renderModel3DList();
+  }
 }
 
 // ======= ADMIN PRODUCTS =======
@@ -1116,7 +1598,1424 @@ function toggleTracking(id) {
   document.getElementById(id).classList.toggle('open');
 }
 
-// ======= STOREFRONT ======= 
+// ======= CONFIGURATOR DATA =======
+const CONFIGURATOR_MODELS = [
+  {
+    id: 'display-case-1',
+    name: 'Refrigerated Display Case 1200L',
+    category: 'Display Cases',
+    basePrice: 4200,
+    leadTimeDays: 14,
+    widths: [850, 1250, 1650, 2050],
+    defaultWidth: 1250,
+    depth: 720,
+    height: 1200,
+    panelColors: ['9005', '9016', '1028', '5015'], // RAL codes: Black, White, Yellow, Sky Blue
+    customizations: [
+      { id: 'glass-type', name: 'Glass Type', options: [
+        { id: 'high-glass', name: 'High Glass (Full)', priceAdj: 0 },
+        { id: 'low-glass', name: 'Low Glass (Bottom)', priceAdj: -300 }
+      ]},
+      { id: 'bottom-type', name: 'Bottom Panel', options: [
+        { id: 'solid-panel', name: 'Solid Panel', priceAdj: 0 },
+        { id: 'glass-panel', name: 'Glass Panel', priceAdj: 400 }
+      ]}
+    ]
+  },
+  {
+    id: 'grab-go-1',
+    name: 'Grab & Go Cooler 1000R',
+    category: 'Grab & Go',
+    basePrice: 3800,
+    leadTimeDays: 10,
+    widths: [850, 1250, 1650, 2050],
+    defaultWidth: 1250,
+    depth: 650,
+    height: 1400,
+    panelColors: ['9005', '9016', '1028'],
+    customizations: [
+      { id: 'door-config', name: 'Door Configuration', options: [
+        { id: 'single-door', name: 'Single Door', priceAdj: 0 },
+        { id: 'double-doors', name: 'Double Doors', priceAdj: 350 },
+        { id: 'triple-doors', name: 'Triple Doors', priceAdj: 700 }
+      ]},
+      { id: 'side-panels', name: 'Side Panels', options: [
+        { id: 'solid-sides', name: 'Solid Sides', priceAdj: 0 },
+        { id: 'glass-sides', name: 'Glass Sides', priceAdj: 500 }
+      ]}
+    ]
+  }
+];
+
+let currentConfig = {
+  modelId: null,
+  width: null,
+  panelColor: '9005',
+  customizations: {},
+  quantity: 1,
+  channeled: false,
+  price: 0,
+  leadTime: 0
+};
+
+// Load 3D models from localStorage
+if (localStorage.getItem('configuratorModels')) {
+  try {
+    const savedModels = JSON.parse(localStorage.getItem('configuratorModels'));
+    console.log('📦 Loaded', savedModels.length, 'models from localStorage');
+    savedModels.forEach(m => {
+      console.log('  - Model:', m.name, '| useGLTF:', m.useGLTF, '| baseModel:', !!m.baseModel, '| size:', m.baseModel ? (m.baseModel.length / 1024).toFixed(0) + 'KB' : 'N/A');
+    });
+    CONFIGURATOR_MODELS.length = 0;
+    CONFIGURATOR_MODELS.push(...savedModels);
+  } catch (e) {
+    console.error('❌ Failed to load models from localStorage:', e);
+  }
+}
+
+let configuratorScene = null;
+let configuratorCamera = null;
+let configuratorRenderer = null;
+let configuratorModel = null;
+let gltfLoader = null;
+let configuratorControls = null;
+let configuratorDrag = { active: false, lastX: 0, lastY: 0, mode: 'rotate' };
+let configuratorRoom = null;
+let threeExtrasPromise = null;
+let dracoLoader = null;
+const USE_APS_VIEWER = true;
+let apsViewer = null;
+let apsViewerReady = false;
+let apsCurrentUrn = null;
+const APS_API_BASE = window.APS_API_BASE || 'http://localhost:8787';
+
+function ensureApsViewer() {
+  if (!USE_APS_VIEWER) {
+    return Promise.resolve(false);
+  }
+  if (apsViewerReady && apsViewer) {
+    return Promise.resolve(true);
+  }
+  if (!window.Autodesk || !Autodesk.Viewing) {
+    console.warn('⚠️ Autodesk Viewer not available');
+    return Promise.resolve(false);
+  }
+
+  return new Promise((resolve) => {
+    const options = {
+      env: 'AutodeskProduction',
+      getAccessToken: async (onTokenReady) => {
+        try {
+          const res = await fetch(APS_API_BASE + '/api/aps/token');
+          const data = await res.json();
+          onTokenReady(data.access_token, data.expires_in);
+        } catch (error) {
+          console.error('❌ Failed to fetch APS token:', error);
+        }
+      }
+    };
+
+    Autodesk.Viewing.Initializer(options, () => {
+      const viewerDiv = document.getElementById('apsViewer');
+      apsViewer = new Autodesk.Viewing.GuiViewer3D(viewerDiv);
+      apsViewer.start();
+      apsViewerReady = true;
+      resolve(true);
+    });
+  });
+}
+
+async function uploadDwgForViewer(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('testStatus');
+  statusEl.textContent = 'Uploading DWG...';
+  statusEl.style.color = '#856404';
+
+  const ready = await ensureApsViewer();
+  if (!ready) {
+    statusEl.textContent = '❌ Viewer not available.';
+    statusEl.style.color = 'red';
+    return;
+  }
+
+  const form = new FormData();
+  form.append('file', file);
+
+  try {
+    const res = await fetch(APS_API_BASE + '/api/aps/upload-translate', {
+      method: 'POST',
+      body: form
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Upload failed');
+    }
+
+    apsCurrentUrn = data.urn;
+    statusEl.textContent = 'Translating...';
+    await waitForTranslation(apsCurrentUrn, statusEl);
+    await loadApsUrn(apsCurrentUrn, statusEl);
+  } catch (error) {
+    console.error('❌ DWG upload failed:', error);
+    statusEl.textContent = '❌ Upload failed: ' + error.message;
+    statusEl.style.color = 'red';
+  }
+}
+
+async function waitForTranslation(urn, statusEl) {
+  const maxAttempts = 60;
+  for (let i = 0; i < maxAttempts; i++) {
+    const res = await fetch(`${APS_API_BASE}/api/aps/manifest/${encodeURIComponent(urn)}`);
+    const data = await res.json();
+    if (data.status === 'success') {
+      statusEl.textContent = '✅ Translation complete';
+      return;
+    }
+    if (data.status === 'failed') {
+      throw new Error('Translation failed');
+    }
+    const progress = data.progress || 'In progress';
+    statusEl.textContent = 'Translating... ' + progress;
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  throw new Error('Translation timed out');
+}
+
+async function loadApsUrn(urn, statusEl) {
+  if (!apsViewer || !apsViewerReady) {
+    throw new Error('Viewer not ready');
+  }
+
+  statusEl.textContent = 'Loading into viewer...';
+  return new Promise((resolve, reject) => {
+    Autodesk.Viewing.Document.load(
+      'urn:' + urn,
+      (doc) => {
+        const defaultViewable = doc.getRoot().getDefaultGeometry();
+        const viewable = defaultViewable || doc.getRoot().search({ type: 'geometry' })[0];
+        if (!viewable) {
+          reject(new Error('No viewable geometry found'));
+          return;
+        }
+        apsViewer.loadDocumentNode(doc, viewable).then(() => {
+          statusEl.textContent = '✅ DWG loaded!';
+          statusEl.style.color = 'green';
+          resolve();
+        }).catch(reject);
+      },
+      (err) => reject(new Error(err))
+    );
+  });
+}
+
+function ensureThreeExtrasLoaded() {
+  if (typeof THREE === 'undefined') {
+    console.warn('⚠️ THREE not available - cannot load GLTFLoader');
+    return Promise.resolve(false);
+  }
+  if (THREE.GLTFLoader && THREE.OrbitControls) {
+    return Promise.resolve(true);
+  }
+  if (threeExtrasPromise) {
+    return threeExtrasPromise;
+  }
+  threeExtrasPromise = new Promise((resolve) => {
+    let pending = 0;
+    const base = 'https://unpkg.com/three@0.128.0/examples/js';
+
+    const loadScript = (src) => {
+      pending += 1;
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => {
+        pending -= 1;
+        if (pending === 0) {
+          resolve(!!THREE.GLTFLoader && !!THREE.OrbitControls);
+        }
+      };
+      script.onerror = () => {
+        pending -= 1;
+        console.warn('⚠️ Failed to load:', src);
+        if (pending === 0) {
+          resolve(!!THREE.GLTFLoader && !!THREE.OrbitControls);
+        }
+      };
+      document.head.appendChild(script);
+    };
+
+    if (!THREE.GLTFLoader) {
+      loadScript(base + '/loaders/GLTFLoader.js');
+    }
+    if (!THREE.OrbitControls) {
+      loadScript(base + '/controls/OrbitControls.js');
+    }
+    if (!THREE.DRACOLoader) {
+      loadScript(base + '/loaders/DRACOLoader.js');
+    }
+    if (!window.MeshoptDecoder) {
+      loadScript(base + '/libs/meshopt_decoder.js');
+    }
+
+    if (pending === 0) {
+      resolve(true);
+    }
+  });
+
+  return threeExtrasPromise;
+}
+
+function configureGltfLoader() {
+  if (!gltfLoader || typeof THREE === 'undefined') {
+    return;
+  }
+  if (THREE.DRACOLoader && !dracoLoader) {
+    dracoLoader = new THREE.DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+    gltfLoader.setDRACOLoader(dracoLoader);
+  }
+  if (window.MeshoptDecoder) {
+    gltfLoader.setMeshoptDecoder(window.MeshoptDecoder);
+  }
+}
+
+function frameConfiguratorObject(object3d) {
+  if (!configuratorCamera || !object3d) {
+    return;
+  }
+  const box = new THREE.Box3().setFromObject(object3d);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  if (!isFinite(maxDim) || maxDim <= 0) {
+    console.warn('⚠️ Cannot frame model: invalid bounds');
+    return;
+  }
+
+  const fov = configuratorCamera.fov * (Math.PI / 180);
+  let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+  cameraZ *= 1.6;
+
+  configuratorCamera.position.set(center.x, center.y + maxDim * 0.2, center.z + cameraZ);
+  configuratorCamera.near = Math.max(0.01, maxDim / 100);
+  configuratorCamera.far = maxDim * 100;
+  configuratorCamera.updateProjectionMatrix();
+
+  if (configuratorControls) {
+    configuratorControls.target.copy(center);
+    configuratorControls.update();
+  } else {
+    configuratorCamera.lookAt(center);
+  }
+}
+
+function showConfigurator() {
+  document.getElementById('storefrontView').style.display = 'none';
+  document.getElementById('adminView').style.display = 'none';
+  document.getElementById('customerPortalView').style.display = 'none';
+  document.getElementById('configuratorView').style.display = 'block';
+  
+  // Give DOM time to reflow, then trigger resize
+  setTimeout(() => {
+    window.dispatchEvent(new Event('resize'));
+    if (apsViewer) {
+      apsViewer.resize();
+    }
+    if (configuratorCamera && configuratorRenderer) {
+      configuratorCamera.aspect = window.innerWidth / window.innerHeight;
+      configuratorCamera.updateProjectionMatrix();
+    }
+  }, 100);
+  
+  initConfigurator();
+  window.scrollTo(0, 0);
+}
+
+function initConfigurator() {
+  console.log('=== initConfigurator called ===');
+  // Restore saved 3D models and variants from localStorage
+  const savedModels = localStorage.getItem('configuratorModels');
+  if (savedModels) {
+    try {
+      const parsedModels = JSON.parse(savedModels);
+      parsedModels.forEach(m => {
+        if (!CONFIGURATOR_MODELS.find(x => x.id === m.id)) {
+          CONFIGURATOR_MODELS.push(m);
+        }
+      });
+    } catch (e) {
+      console.log('Could not restore models from localStorage');
+    }
+  }
+  
+  const savedVariants = localStorage.getItem('variantFiles');
+  if (savedVariants) {
+    try {
+      variantFiles = JSON.parse(savedVariants);
+    } catch (e) {
+      console.log('Could not restore variant files from localStorage');
+    }
+  }
+  
+  // Populate model selector
+  const modelSelect = document.getElementById('modelSelect');
+  modelSelect.innerHTML = '<option value="">Choose a model...</option>' + 
+    CONFIGURATOR_MODELS.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  
+  if (USE_APS_VIEWER) {
+    ensureApsViewer();
+  } else {
+    // Initialize Three.js scene if not already done
+    if (!configuratorScene) {
+      initThreeJS();
+    }
+    
+    // Initialize GLTFLoader - load fallback if needed
+    ensureThreeExtrasLoaded().then((ready) => {
+      if (ready && !gltfLoader) {
+        gltfLoader = new THREE.GLTFLoader();
+        configureGltfLoader();
+        console.log('✓ GLTFLoader initialized');
+      } else if (ready && gltfLoader) {
+        configureGltfLoader();
+      } else if (!ready) {
+        console.warn('⚠️ GLTFLoader not available - check if script loaded');
+      }
+    });
+  }
+  
+  // Auto-select first model for testing
+  if (!modelSelect.value && CONFIGURATOR_MODELS.length > 0) {
+    modelSelect.value = CONFIGURATOR_MODELS[0].id;
+    console.log('Auto-selected first model:', CONFIGURATOR_MODELS[0].id);
+    updateConfigurator();
+  }
+}
+
+function initThreeJS() {
+  console.log('=== initThreeJS START ===');
+  console.log('THREE.js loaded?', typeof THREE !== 'undefined');
+  console.log('THREE.Scene:', typeof THREE.Scene);
+  
+  const canvas = document.getElementById('configuratorCanvas');
+  if (!canvas) {
+    console.error('CANVAS NOT FOUND!');
+    return;
+  }
+  
+  // Use the rendered canvas size
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(300, Math.floor(rect.width));
+  const height = Math.max(300, Math.floor(rect.height));
+  console.log('Using canvas size:', width, 'x', height);
+  
+  // Clear and set canvas size explicitly
+  canvas.width = width;
+  canvas.height = height;
+  canvas.style.display = 'block';
+  canvas.style.pointerEvents = 'auto';
+  
+  try {
+    configuratorScene = new THREE.Scene();
+    console.log('✓ Scene created');
+  } catch(e) {
+    console.error('FAILED to create scene:', e);
+    return;
+  }
+  
+  configuratorScene.background = new THREE.Color(0xf5f5f0);
+  
+  try {
+    configuratorCamera = new THREE.PerspectiveCamera(65, 1.0, 0.1, 1000);
+    configuratorCamera.position.set(0, 1.2, 3.2);
+    configuratorCamera.lookAt(0, 0.6, 0);
+    console.log('✓ Camera created');
+  } catch(e) {
+    console.error('FAILED to create camera:', e);
+    return;
+  }
+  
+  try {
+    configuratorRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    console.log('✓ WebGL Renderer created');
+  } catch(e) {
+    console.error('FAILED to create renderer:', e);
+    return;
+  }
+  
+  configuratorRenderer.setSize(width, height, false);
+  configuratorRenderer.setPixelRatio(window.devicePixelRatio || 1);
+  configuratorRenderer.shadowMap.enabled = true;
+  configuratorRenderer.shadowMap.type = THREE.PCFShadowMap;
+  console.log('✓ Renderer configured');
+
+  if (THREE.OrbitControls) {
+    configuratorControls = new THREE.OrbitControls(configuratorCamera, configuratorRenderer.domElement);
+    configuratorControls.enableDamping = true;
+    configuratorControls.dampingFactor = 0.08;
+    configuratorControls.enableRotate = true;
+    configuratorControls.enablePan = true;
+    configuratorControls.enableZoom = true;
+    configuratorControls.zoomSpeed = 0.9;
+    configuratorControls.minDistance = 1.6;
+    configuratorControls.maxDistance = 6.0;
+    configuratorControls.maxPolarAngle = Math.PI / 2.1;
+    configuratorControls.target.set(0, 0.6, 0);
+    configuratorControls.update();
+
+    // Enable controls only when hovering over the canvas
+    configuratorControls.enabled = false;
+    canvas.addEventListener('mouseenter', () => { configuratorControls.enabled = true; });
+    canvas.addEventListener('mouseleave', () => { configuratorControls.enabled = false; });
+  } else {
+    console.warn('OrbitControls not available; mouse controls disabled.');
+  }
+
+  // Fallback: basic drag-to-rotate on the model itself
+  canvas.style.cursor = 'grab';
+  canvas.addEventListener('wheel', (event) => {
+    if (configuratorControls && configuratorControls.enabled) return;
+    if (!configuratorCamera) return;
+    event.preventDefault();
+    const zoomDelta = Math.sign(event.deltaY) * 0.2;
+    const dir = new THREE.Vector3();
+    configuratorCamera.getWorldDirection(dir);
+    configuratorCamera.position.addScaledVector(dir, zoomDelta);
+  }, { passive: false });
+
+  canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+  canvas.addEventListener('mousedown', (event) => {
+    configuratorDrag.active = true;
+    configuratorDrag.lastX = event.clientX;
+    configuratorDrag.lastY = event.clientY;
+    configuratorDrag.mode = event.button === 2 ? 'pan' : 'rotate';
+    canvas.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => {
+    configuratorDrag.active = false;
+    canvas.style.cursor = 'grab';
+  });
+  window.addEventListener('mousemove', (event) => {
+    if (configuratorControls && configuratorControls.enableRotate) return;
+    if (!configuratorDrag.active || !configuratorRoom) return;
+    const deltaX = event.clientX - configuratorDrag.lastX;
+    const deltaY = event.clientY - configuratorDrag.lastY;
+    configuratorDrag.lastX = event.clientX;
+    configuratorDrag.lastY = event.clientY;
+
+    if (configuratorDrag.mode === 'pan') {
+      configuratorRoom.position.x += deltaX * 0.004;
+      configuratorRoom.position.z += deltaY * 0.004;
+    } else {
+      configuratorRoom.rotation.y += deltaX * 0.005;
+      configuratorRoom.rotation.x = Math.max(-0.2, Math.min(0.3, configuratorRoom.rotation.x + deltaY * 0.002));
+    }
+  });
+  
+  // Professional Lighting Setup
+  // Soft ambient light for overall illumination
+  const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
+  configuratorScene.add(ambLight);
+  console.log('✓ Ambient light added');
+  
+  // Key light (main directional light from upper right)
+  const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  keyLight.position.set(4, 5, 4);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.width = 2048;
+  keyLight.shadow.mapSize.height = 2048;
+  keyLight.shadow.camera.far = 20;
+  keyLight.shadow.camera.left = -8;
+  keyLight.shadow.camera.right = 8;
+  keyLight.shadow.camera.top = 8;
+  keyLight.shadow.camera.bottom = -8;
+  keyLight.shadow.bias = -0.0001;
+  configuratorScene.add(keyLight);
+  console.log('✓ Key light added');
+  
+  // Fill light (softer light from opposite side for ambient fill)
+  const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+  fillLight.position.set(-3, 3, -2);
+  configuratorScene.add(fillLight);
+  console.log('✓ Fill light added');
+  
+  // Back light for depth and rim lighting
+  const backLight = new THREE.DirectionalLight(0xffffff, 0.4);
+  backLight.position.set(0, 2.5, -5);
+  configuratorScene.add(backLight);
+  console.log('✓ Back light added');
+  
+  // START RENDER LOOP
+  console.log('Starting render loop...');
+  let renderCount = 0;
+  function animate() {
+    renderCount++;
+    if (renderCount === 1) {
+      console.log('*** FIRST RENDER FRAME ***');
+      console.log('Scene children:', configuratorScene.children.length);
+      console.log('Camera:', configuratorCamera.position);
+      console.log('Renderer:', configuratorRenderer.domElement);
+    }
+    
+    requestAnimationFrame(animate);
+    
+    if (configuratorControls) {
+      configuratorControls.update();
+    }
+    
+    configuratorRenderer.render(configuratorScene, configuratorCamera);
+  }
+  
+  animate();
+  console.log('=== initThreeJS END ===');
+}
+
+function updateConfigurator() {
+  const modelId = document.getElementById('modelSelect').value;
+  if (!modelId) return;
+  
+  const model = CONFIGURATOR_MODELS.find(m => m.id === modelId);
+  if (!model) return;
+  
+  currentConfig.modelId = modelId;
+  currentConfig.width = model.defaultWidth;
+  currentConfig.panelColor = model.panelColors[0];
+  currentConfig.customizations = {};
+  currentConfig.quantity = 1;
+  currentConfig.channeled = false;
+  
+  // Show/hide relevant sections
+  document.getElementById('sizeSection').style.display = 'block';
+  document.getElementById('quantitySection').style.display = 'block';
+  document.getElementById('panelColorSection').style.display = 'block';
+  document.getElementById('customOptionsSection').style.display = 'block';
+  
+  // Setup size buttons
+  document.querySelectorAll('.config-btn[data-size]').forEach(btn => {
+    btn.classList.remove('active');
+    if (parseInt(btn.getAttribute('data-size')) === model.defaultWidth) {
+      btn.classList.add('active');
+    }
+  });
+
+  // Setup quantity buttons
+  document.querySelectorAll('.config-btn[data-qty]').forEach(btn => {
+    btn.classList.remove('active');
+    if (parseInt(btn.getAttribute('data-qty')) === 1) {
+      btn.classList.add('active');
+    }
+  });
+  const channeledBtn = document.getElementById('channeledBtn');
+  if (channeledBtn) channeledBtn.classList.remove('active');
+  
+  // Setup color picker
+  setupColorPicker(model.panelColors);
+  
+  // Setup customization options
+  setupCustomizations(model);
+  
+  // Create 3D model
+  if (!USE_APS_VIEWER) {
+    console.log('📐 updateConfigurator calling createDisplayCaseModel');
+    console.log('   Selected model:', model.name, '(ID:', model.id + ')');
+    createDisplayCaseModel(model, model.defaultWidth);
+  }
+  
+  // Update price and lead time
+  updateConfigPrice();
+}
+
+function setupColorPicker(ralCodes) {
+  const grid = document.getElementById('colorPickerGrid');
+  const ralColorMap = {
+    '9005': '#010a12', // Black
+    '9016': '#f8f8f8', // White
+    '1028': '#f4d60b', // Yellow
+    '5015': '#87ceeb', // Sky Blue
+    '3004': '#5a0a0a', // Dark Red
+    '6024': '#498b3e', // Green
+    '2004': '#ff6600', // Orange
+  };
+  
+  grid.innerHTML = ralCodes.map(code => `
+    <div class="color-swatch ${code === currentConfig.panelColor ? 'active' : ''}" 
+         style="background-color: ${ralColorMap[code] || '#cccccc'}" 
+         data-ral="${code}" 
+         onclick="setColorOption(this, '${code}')"
+         title="RAL ${code}"></div>
+  `).join('');
+}
+
+function setColorOption(el, ralCode) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  currentConfig.panelColor = ralCode;
+  updatePanelColor(ralCode);
+  updateConfigPrice();
+}
+
+function applyCustomRalColor() {
+  const code = document.getElementById('ralInput').value.trim();
+  if (!/^\d{4}$/.test(code)) {
+    alert('Please enter a valid 4-digit RAL code (e.g., 9005)');
+    return;
+  }
+  currentConfig.panelColor = code;
+  updatePanelColor(code);
+  updateConfigPrice();
+  alert(`Applied RAL ${code}`);
+}
+
+function setSizeOption(el) {
+  document.querySelectorAll('.config-btn[data-size]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const newWidth = parseInt(el.getAttribute('data-size'));
+  currentConfig.width = newWidth;
+  
+  const model = CONFIGURATOR_MODELS.find(m => m.id === currentConfig.modelId);
+  if (model && !USE_APS_VIEWER) {
+    createDisplayCaseModel(model, newWidth);
+  }
+  updateConfigPrice();
+}
+
+function setQuantityOption(el) {
+  document.querySelectorAll('.config-btn[data-qty]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const newQty = parseInt(el.getAttribute('data-qty'));
+  currentConfig.quantity = newQty;
+
+  const model = CONFIGURATOR_MODELS.find(m => m.id === currentConfig.modelId);
+  if (model && !USE_APS_VIEWER) {
+    createDisplayCaseModel(model, currentConfig.width);
+  }
+  updateConfigPrice();
+}
+
+function toggleChanneled(btn) {
+  const isActive = btn.classList.toggle('active');
+  currentConfig.channeled = isActive;
+
+  const model = CONFIGURATOR_MODELS.find(m => m.id === currentConfig.modelId);
+  if (model && !USE_APS_VIEWER) {
+    createDisplayCaseModel(model, currentConfig.width);
+  }
+}
+
+function setupCustomizations(model) {
+  const container = document.getElementById('customOptionsContainer');
+  container.innerHTML = '';
+  
+  model.customizations.forEach(group => {
+    const section = document.createElement('div');
+    section.style.marginBottom = '16px';
+    section.innerHTML = `<label class="config-label" style="margin-bottom: 8px;">${group.name}</label>`;
+    
+    const buttons = document.createElement('div');
+    buttons.style.display = 'grid';
+    buttons.style.gridTemplateColumns = '1fr 1fr';
+    buttons.style.gap = '8px';
+    
+    group.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'config-btn';
+      btn.textContent = opt.name;
+      btn.onclick = () => selectCustomization(group.id, opt.id, btn);
+      buttons.appendChild(btn);
+    });
+    
+    section.appendChild(buttons);
+    container.appendChild(section);
+  });
+}
+
+function selectCustomization(groupId, optionId, btn) {
+  btn.parentElement.querySelectorAll('.config-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentConfig.customizations[groupId] = optionId;
+  updateConfigPrice();
+  updatePanelColor(currentConfig.panelColor);
+}
+
+function loadVariantModel(variantData) {
+  // Parse data URL to blob
+  const arr = variantData.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  const n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    u8arr[i] = bstr.charCodeAt(i);
+  }
+  const blob = new Blob([u8arr], { type: mime });
+  const url = URL.createObjectURL(blob);
+  
+  if (gltfLoader && configuratorModel) {
+    gltfLoader.load(url, (gltf) => {
+      // Find and replace matching mesh in the model
+      gltf.scene.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      // For now, just add the loaded model as an overlay
+      // In production, you'd identify specific parts to swap
+      const loadedModel = gltf.scene;
+      loadedModel.position.copy(configuratorModel.position);
+      loadedModel.rotation.copy(configuratorModel.rotation);
+      URL.revokeObjectURL(url);
+    });
+  }
+}
+
+function createDisplayCaseModel(model, width) {
+  // Make sure scene exists
+  console.log('🔍 createDisplayCaseModel called');
+  console.log('  Model name:', model.name);
+  console.log('  Model ID:', model.id);
+  console.log('  Width:', width);
+  console.log('  model.useGLTF:', model.useGLTF);
+  console.log('  model.baseModel exists:', !!model.baseModel);
+  console.log('  model.baseModel length:', model.baseModel ? model.baseModel.length : 0);
+  console.log('  model.baseFileName:', model.baseFileName);
+  console.log('  gltfLoader exists:', !!gltfLoader);
+  console.log('  configuratorScene exists:', !!configuratorScene);
+  
+  if (!configuratorScene) {
+    console.error('❌ Scene not initialized!');
+    return;
+  }
+  
+  // Ensure room group exists
+  if (!configuratorRoom) {
+    configuratorRoom = new THREE.Group();
+    configuratorRoom.name = 'roomGroup';
+    configuratorScene.add(configuratorRoom);
+    console.log('✓ Created room group');
+  }
+
+  // Remove old model
+  if (configuratorModel && configuratorRoom) {
+    configuratorRoom.remove(configuratorModel);
+    console.log('✓ Removed old model from room');
+  }
+  
+  configuratorModel = new THREE.Group();
+  configuratorRoom.add(configuratorModel);
+  console.log('✓ Created new model group and added to room');
+  
+  // Check if this model has an uploaded GLTF file (admin-uploaded)
+  if (model.useGLTF && model.baseModel && gltfLoader) {
+    console.log('🎨 Loading admin-uploaded 3D model:', model.name);
+    loadGLTFModel(model.baseModel, model.baseFileName);
+  } else {
+    if (!model.useGLTF) {
+      console.log('⚠️ Model does not have useGLTF flag');
+    }
+    if (!model.baseModel) {
+      console.log('⚠️ Model does not have baseModel data');
+    }
+    if (!gltfLoader) {
+      console.log('⚠️ GLTFLoader not initialized');
+    }
+    // Use procedural models as default
+    console.log('🔨 Creating procedural model (fallback)');
+    createProceduralModel(width, currentConfig.quantity || 1);
+  }
+}
+
+function loadGLTFModel(modelData, fileName) {
+  console.log('📥 loadGLTFModel called for:', fileName);
+  console.log('  modelData:', !!modelData);
+  console.log('  gltfLoader:', !!gltfLoader);
+  console.log('  configuratorModel:', !!configuratorModel);
+  console.log('  configuratorRoom:', !!configuratorRoom);
+  
+  if (!modelData) {
+    console.error('❌ No model data');
+    return;
+  }
+  
+  if (!gltfLoader) {
+    console.error('❌ GLTFLoader not initialized');
+    return;
+  }
+  
+  if (!configuratorModel) {
+    console.error('❌ Configurator model group not ready');
+    return;
+  }
+  
+  try {
+    console.log('🔍 Attempting to parse base64 data...');
+    console.log('  Data starts with:', modelData.substring(0, 50));
+    
+    // Check if it's a data URL
+    if (!modelData.startsWith('data:')) {
+      console.error('❌ Invalid data format - not a data URL');
+      alert('Error: Model data is not in data URL format');
+      createProceduralModel(currentConfig.width || 1250, currentConfig.quantity || 1);
+      return;
+    }
+    
+    // Convert base64 data URL to blob
+    const arr = modelData.split(',');
+    if (arr.length < 2) {
+      console.error('❌ Invalid data URL format');
+      alert('Error: Model data URL is malformed');
+      createProceduralModel(currentConfig.width || 1250, currentConfig.quantity || 1);
+      return;
+    }
+    
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) {
+      console.error('❌ Could not extract MIME type');
+      alert('Error: Could not determine file type from data');
+      createProceduralModel(currentConfig.width || 1250, currentConfig.quantity || 1);
+      return;
+    }
+    
+    const mime = mimeMatch[1];
+    console.log('✓ MIME type:', mime);
+    
+    const bstr = atob(arr[1]);
+    const n = bstr.length;
+    console.log('✓ Decoded', n, 'bytes');
+    
+    const u8arr = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
+      u8arr[i] = bstr.charCodeAt(i);
+    }
+    const blob = new Blob([u8arr], { type: mime });
+    const url = URL.createObjectURL(blob);
+    
+    console.log('✓ Created blob URL:', url);
+    console.log('✓ Blob size:', (blob.size / 1024).toFixed(2), 'KB');
+    console.log('🚀 Starting GLTFLoader.load...');
+    
+    gltfLoader.load(
+      url,
+      function(gltf) {
+        console.log('✅ GLTF loaded successfully!');
+        console.log('  Scene children:', gltf.scene ? gltf.scene.children.length : 0);
+        
+        // Clear existing model group
+        while (configuratorModel.children.length > 0) {
+          configuratorModel.remove(configuratorModel.children[0]);
+        }
+        console.log('✓ Cleared old model');
+
+        // Reset room transform so new models don't inherit old offsets
+        configuratorRoom.position.set(0, 0, 0);
+        configuratorRoom.rotation.set(0, 0, 0);
+        
+        // Hide procedural floor and walls when loading custom model
+        configuratorRoom.children.forEach(child => {
+          if (child.name === 'floor' || child.name === 'walls') {
+            child.visible = false;
+            console.log('✓ Hidden', child.name, 'for custom model');
+          }
+        });
+        
+        const loadedScene = gltf.scene || (gltf.scenes && gltf.scenes[0]) || new THREE.Group();
+        
+        // Enable shadows for all meshes
+        let meshCount = 0;
+        let pointsCount = 0;
+        let lineCount = 0;
+        loadedScene.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            meshCount++;
+          } else if (child.isPoints) {
+            pointsCount++;
+          } else if (child.isLine) {
+            lineCount++;
+          }
+        });
+        console.log('✓ Enabled shadows for', meshCount, 'meshes', pointsCount, 'points', lineCount, 'lines');
+        
+        if (meshCount === 0) {
+          console.warn('⚠️ No meshes found in GLTF model!');
+          alert('Warning: No meshes found. If this is a point cloud/lines, it may still render.');
+          if (configuratorControls && (pointsCount + lineCount) > 0) {
+            configuratorControls.enableRotate = false;
+            configuratorControls.update();
+            showToast('Line/point model detected. Rotation disabled to keep it visible. Export a mesh for full 3D.');
+          }
+        }
+        
+        // Center the model
+        const box = new THREE.Box3().setFromObject(loadedScene);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        
+        console.log('  Model size:', size.x.toFixed(2), 'x', size.y.toFixed(2), 'x', size.z.toFixed(2));
+        console.log('  Model center:', center.x.toFixed(2), center.y.toFixed(2), center.z.toFixed(2));
+        
+        // Center horizontally and place on floor
+        loadedScene.position.x = -center.x;
+        loadedScene.position.y = -box.min.y; // Place bottom on y=0
+        loadedScene.position.z = -center.z;
+        
+        // Scale to reasonable size (max dimension = 2 units)
+        const maxDim = Math.max(size.x, size.y, size.z);
+        console.log('  Max dimension:', maxDim.toFixed(2));
+        
+        if (maxDim > 2) {
+          const scale = 2 / maxDim;
+          loadedScene.scale.multiplyScalar(scale);
+          console.log('✓ Scaled model by', scale.toFixed(3));
+        } else if (maxDim < 0.1) {
+          const scale = 2 / maxDim;
+          loadedScene.scale.multiplyScalar(scale);
+          console.log('✓ Model was tiny, scaled up by', scale.toFixed(3));
+        }
+        
+        configuratorModel.add(loadedScene);
+        console.log('✓ Added to model group');
+        console.log('✓ Model group now has', configuratorModel.children.length, 'children');
+
+        frameConfiguratorObject(configuratorModel);
+        
+        // Add model to room if not already added
+        if (!configuratorModel.parent) {
+          configuratorRoom.add(configuratorModel);
+          console.log('✓ Added model to room');
+        }
+        
+        // Ensure room is in scene
+        if (!configuratorRoom.parent) {
+          configuratorScene.add(configuratorRoom);
+          console.log('✓ Added room to scene');
+        }
+        
+        URL.revokeObjectURL(url);
+        console.log('✅ Admin 3D model fully loaded and displayed!');
+      },
+      function(xhr) {
+        if (xhr.total > 0) {
+          const progress = (xhr.loaded / xhr.total * 100).toFixed(0);
+          console.log('⏳ Loading progress:', progress + '%');
+        }
+      },
+      function(error) {
+        console.error('❌ Error loading GLTF model:', error);
+        console.error('  Error type:', error.type);
+        console.error('  Error message:', error.message);
+        console.error('  Error stack:', error.stack);
+        alert('Error loading 3D model. The file may be corrupted or invalid.\n\nError: ' + error.message + '\n\nCheck console for details.');
+        URL.revokeObjectURL(url);
+        // Fall back to procedural model
+        console.log('🔨 Falling back to procedural model');
+        createProceduralModel(currentConfig.width || 1250, currentConfig.quantity || 1);
+      }
+    );
+  } catch (error) {
+    console.error('❌ Exception in loadGLTFModel:', error);
+    console.error('  Stack:', error.stack);
+    alert('Error processing 3D model file: ' + error.message + '\n\nCheck console for details.');
+    // Fall back to procedural model
+    console.log('🔨 Falling back to procedural model');
+    createProceduralModel(currentConfig.width || 1250, currentConfig.quantity || 1);
+  }
+}
+
+// Test function to directly load a model file without storage
+async function testLoadModel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  console.log('🧪 TEST MODE: Direct model load');
+  console.log('  File:', file.name);
+  console.log('  Size:', (file.size / 1024).toFixed(2), 'KB');
+  console.log('  Type:', file.type);
+  
+  document.getElementById('testStatus').textContent = 'Loading...';
+  
+  if (!configuratorScene) {
+    initThreeJS();
+  }
+  
+  const ready = await ensureThreeExtrasLoaded();
+  if (ready && !gltfLoader) {
+    gltfLoader = new THREE.GLTFLoader();
+    configureGltfLoader();
+  } else if (ready && gltfLoader) {
+    configureGltfLoader();
+  }
+  if (!gltfLoader) {
+    alert('GLTFLoader not available');
+    return;
+  }
+  
+  // Ensure room and model are set up
+  if (!configuratorRoom) {
+    configuratorRoom = new THREE.Group();
+    configuratorRoom.name = 'roomGroup';
+    configuratorScene.add(configuratorRoom);
+  }
+  
+  if (!configuratorModel) {
+    configuratorModel = new THREE.Group();
+    configuratorRoom.add(configuratorModel);
+  } else {
+    // Clear existing
+    while (configuratorModel.children.length > 0) {
+      configuratorModel.remove(configuratorModel.children[0]);
+    }
+  }
+  
+  // Create blob URL directly from file
+  const url = URL.createObjectURL(file);
+  console.log('✓ Created blob URL from file:', url);
+  
+  gltfLoader.load(
+    url,
+    function(gltf) {
+      console.log('✅ TEST: GLTF loaded successfully!');
+      const loadedScene = gltf.scene || (gltf.scenes && gltf.scenes[0]) || new THREE.Group();
+      
+      // Hide any existing procedural elements
+      configuratorRoom.children.forEach(child => {
+        if (child.name === 'floor' || child.name === 'walls') {
+          child.visible = false;
+          console.log('✓ TEST: Hidden', child.name);
+        }
+      });
+
+      configuratorRoom.position.set(0, 0, 0);
+      configuratorRoom.rotation.set(0, 0, 0);
+      
+      let meshCount = 0;
+      let pointsCount = 0;
+      let lineCount = 0;
+      loadedScene.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          meshCount++;
+          console.log('✓ TEST: Mesh found:', child.name || 'unnamed', 'material:', child.material ? child.material.type : 'none');
+        } else if (child.isPoints) {
+          pointsCount++;
+        } else if (child.isLine) {
+          lineCount++;
+        }
+      });
+      console.log('✓ TEST: Found', meshCount, 'meshes', pointsCount, 'points', lineCount, 'lines');
+      
+      if (meshCount === 0) {
+        console.warn('⚠️ TEST: No meshes found in model!');
+        document.getElementById('testStatus').textContent = '⚠️ No meshes detected (points/lines may still render).';
+        document.getElementById('testStatus').style.color = 'orange';
+        if (configuratorControls && (pointsCount + lineCount) > 0) {
+          configuratorControls.enableRotate = false;
+          configuratorControls.update();
+          document.getElementById('testStatus').textContent = '⚠️ Line/point model detected. Rotation disabled to keep it visible.';
+        }
+      }
+      
+      // Center and scale
+      const box = new THREE.Box3().setFromObject(loadedScene);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      
+      console.log('✓ TEST: Model size:', size.x.toFixed(2), 'x', size.y.toFixed(2), 'x', size.z.toFixed(2));
+      console.log('✓ TEST: Model bounds min:', box.min.x.toFixed(2), box.min.y.toFixed(2), box.min.z.toFixed(2));
+      console.log('✓ TEST: Model bounds max:', box.max.x.toFixed(2), box.max.y.toFixed(2), box.max.z.toFixed(2));
+      
+      loadedScene.position.x = -center.x;
+      loadedScene.position.y = -box.min.y;
+      loadedScene.position.z = -center.z;
+      
+      const maxDim = Math.max(size.x, size.y, size.z);
+      console.log('✓ TEST: Max dimension:', maxDim.toFixed(2));
+      
+      if (maxDim > 2) {
+        const scale = 2 / maxDim;
+        loadedScene.scale.multiplyScalar(scale);
+        console.log('✓ TEST: Scaled by', scale.toFixed(3));
+      } else if (maxDim < 0.1) {
+        // Model is too small, scale it up
+        const scale = 2 / maxDim;
+        loadedScene.scale.multiplyScalar(scale);
+        console.log('✓ TEST: Model was tiny, scaled up by', scale.toFixed(3));
+      }
+      
+      configuratorModel.add(loadedScene);
+      console.log('✓ TEST: Added loaded scene to model group');
+      console.log('✓ TEST: Model group now has', configuratorModel.children.length, 'children');
+      console.log('✓ TEST: Model group position:', configuratorModel.position.x, configuratorModel.position.y, configuratorModel.position.z);
+      console.log('✓ TEST: Room group has', configuratorRoom.children.length, 'children');
+
+      frameConfiguratorObject(configuratorModel);
+      
+      URL.revokeObjectURL(url);
+      
+      document.getElementById('testStatus').textContent = '✅ Model loaded! Check viewer above.';
+      document.getElementById('testStatus').style.color = 'green';
+      console.log('✅ TEST: Model successfully displayed!');
+      console.log('📊 Final scene hierarchy:');
+      console.log('  Scene -> Room ->', configuratorRoom.children.map(c => c.name || c.type).join(', '));
+      console.log('  Model group ->', configuratorModel.children.map(c => c.name || c.type).join(', '));
+      showToast('✅ Test successful! Model should be visible in viewer.');
+    },
+    function(xhr) {
+      if (xhr.total > 0) {
+        const progress = (xhr.loaded / xhr.total * 100).toFixed(0);
+        document.getElementById('testStatus').textContent = `Loading... ${progress}%`;
+      }
+    },
+    function(error) {
+      console.error('❌ TEST: Failed to load model:', error);
+      document.getElementById('testStatus').textContent = '❌ Failed: ' + error.message;
+      document.getElementById('testStatus').style.color = 'red';
+      alert('Test failed: ' + error.message + '\n\nYour model file may be corrupted or in an unsupported format.');
+      URL.revokeObjectURL(url);
+    }
+  );
+}
+
+function createProceduralModel(width, quantity) {
+  console.log('createProceduralModel called, model:', !!configuratorModel, 'scene:', !!configuratorScene);
+  if (!configuratorModel || !configuratorScene) {
+    console.log('Early return - missing model or scene');
+    return;
+  }
+
+  const safeQuantity = Math.max(1, quantity || 1);
+  
+  // Show floor and walls for procedural models
+  configuratorRoom.children.forEach(child => {
+    if (child.name === 'floor' || child.name === 'walls') {
+      child.visible = true;
+      console.log('✓ Made', child.name, 'visible for procedural model');
+    }
+  });
+  
+  // Scale the width (normalize to 1250 as 1 unit)
+  const widthScale = width / 1250;
+  // Apply overall scale multiplier to make model more proportional to room
+  const modelScale = 1.8;
+  const scaledWidth = widthScale * modelScale;
+  const scaledHeight = 1.2 * modelScale;
+  const scaledDepth = 0.72 * modelScale;
+  
+  console.log('Creating procedural model with scaledWidth:', scaledWidth, 'scaledHeight:', scaledHeight, 'scaledDepth:', scaledDepth);
+  
+  // Add floor plane if not already added
+  if (!configuratorRoom.getObjectByName('floor')) {
+    const floorGeom = new THREE.PlaneGeometry(13.5, 5.4);
+    const floorMat = new THREE.MeshStandardMaterial({ 
+      color: 0xf0f0eb,
+      metalness: 0.05,
+      roughness: 0.9
+    });
+    const floor = new THREE.Mesh(floorGeom, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.6;
+    floor.position.z = -0.6;
+    floor.receiveShadow = true;
+    floor.name = 'floor';
+    configuratorRoom.add(floor);
+    console.log('Added floor plane');
+  }
+  
+  // Add room walls (very subtle, almost invisible)
+  if (!configuratorRoom.getObjectByName('walls')) {
+    const wallGeom = new THREE.BoxGeometry(11.25, 4.0, 4.5);
+    const wallMat = new THREE.MeshBasicMaterial({ wireframe: false, color: 0xf5f5f0, transparent: true, opacity: 0.0 });
+    const walls = new THREE.Mesh(wallGeom, wallMat);
+    walls.position.y = 0.8;
+    walls.name = 'walls';
+    configuratorRoom.add(walls);
+    console.log('Added room walls');
+  }
+  
+  const caseGap = 0;
+  const totalWidth = (scaledWidth * safeQuantity) + (caseGap * (safeQuantity - 1));
+  const startX = -totalWidth / 2 + scaledWidth / 2;
+
+  for (let q = 0; q < safeQuantity; q++) {
+    const caseGroup = new THREE.Group();
+
+    // Main case body
+    const bodyGeom = new THREE.BoxGeometry(scaledWidth, scaledHeight, scaledDepth);
+    const panelMaterial = new THREE.MeshStandardMaterial({ 
+      color: getRalColor(currentConfig.panelColor),
+      metalness: 0.1,
+      roughness: 0.5,
+      side: THREE.FrontSide
+    });
+    const body = new THREE.Mesh(bodyGeom, panelMaterial);
+    body.castShadow = true;
+    body.receiveShadow = true;
+    caseGroup.add(body);
+    
+    // Glass front with better material
+    const glassGeom = new THREE.BoxGeometry(scaledWidth * 0.98, scaledHeight * 0.79, 0.05 * modelScale);
+    const glassMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf0f8ff,
+      metalness: 0.05,
+      roughness: 0.15,
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide
+    });
+    const glass = new THREE.Mesh(glassGeom, glassMaterial);
+    glass.position.z = (0.36 * modelScale);
+    glass.castShadow = true;
+    glass.receiveShadow = true;
+    caseGroup.add(glass);
+    
+    // Bottom shelf with better reflectivity
+    const shelfGeom = new THREE.BoxGeometry(scaledWidth * 0.95, 0.02 * modelScale, scaledDepth * 0.9);
+    const shelfMat = new THREE.MeshStandardMaterial({ 
+      color: 0xf5f5f5,
+      metalness: 0.3,
+      roughness: 0.6
+    });
+    const shelf = new THREE.Mesh(shelfGeom, shelfMat);
+    shelf.position.y = -0.4 * modelScale;
+    shelf.castShadow = true;
+    shelf.receiveShadow = true;
+    caseGroup.add(shelf);
+    
+    // Feet with better appearance
+    for (let i = 0; i < 4; i++) {
+      const footGeom = new THREE.BoxGeometry(0.05 * modelScale, 0.08 * modelScale, 0.05 * modelScale);
+      const footMat = new THREE.MeshStandardMaterial({ 
+        color: 0x1a1a1a,
+        metalness: 0.4,
+        roughness: 0.7
+      });
+      const foot = new THREE.Mesh(footGeom, footMat);
+      const xPos = (i < 2 ? -1 : 1) * (scaledWidth / 2 - 0.1 * modelScale);
+      const zPos = (i % 2 === 0 ? -1 : 1) * (0.25 * modelScale);
+      foot.position.set(xPos, -0.59 * modelScale, zPos);
+      foot.castShadow = true;
+      foot.receiveShadow = true;
+      caseGroup.add(foot);
+    }
+
+    caseGroup.position.x = startX + q * (scaledWidth + caseGap);
+    configuratorModel.add(caseGroup);
+  }
+  
+  console.log('About to add model to room, room children before:', configuratorRoom.children.length);
+  configuratorRoom.add(configuratorModel);
+  console.log('Model added to room, room children after:', configuratorRoom.children.length);
+  configuratorModel.position.y = 0;
+}
+
+function getRalColor(ralCode) {
+  const colors = {
+    '9005': 0x010a12, // Black
+    '9016': 0xf8f8f8, // White
+    '1028': 0xf4d60b, // Yellow
+    '5015': 0x87ceeb, // Sky Blue
+    '3004': 0x5a0a0a, // Dark Red
+    '6024': 0x498b3e, // Green
+    '2004': 0xff6600, // Orange
+  };
+  return colors[ralCode] || 0xcccccc;
+}
+
+function updatePanelColor(ralCode) {
+  if (configuratorModel) {
+    // Update all meshes in the model tree
+    configuratorModel.traverse((child) => {
+      if (child.isMesh && child.material) {
+        // Check if this mesh should have the panel color applied
+        if (!child.name.toLowerCase().includes('glass') && 
+            !child.name.toLowerCase().includes('foot') &&
+            !child.name.toLowerCase().includes('shelf')) {
+          // Apply color
+          if (Array.isArray(child.material)) {
+            child.material.forEach(mat => {
+              if (mat.color) mat.color.setHex(getRalColor(ralCode));
+            });
+          } else if (child.material.color) {
+            child.material.color.setHex(getRalColor(ralCode));
+          }
+        }
+      }
+    });
+  }
+}
+
+function updateConfigPrice() {
+  const model = CONFIGURATOR_MODELS.find(m => m.id === currentConfig.modelId);
+  if (!model) return;
+  
+  let price = model.basePrice * (currentConfig.quantity || 1);
+  
+  // Add size premium (width increase)
+  const sizeAdj = (currentConfig.width - 1250) / 100 * 15;
+  price += sizeAdj;
+  
+  // Add customization prices
+  model.customizations.forEach(group => {
+    const selectedOptId = currentConfig.customizations[group.id];
+    const option = group.options.find(o => o.id === selectedOptId);
+    if (option) {
+      price += option.priceAdj;
+    }
+  });
+  
+  currentConfig.price = Math.max(0, Math.round(price));
+  currentConfig.leadTime = model.leadTimeDays;
+  
+  document.getElementById('configPrice').textContent = currentConfig.price.toLocaleString();
+  document.getElementById('configLeadtime').textContent = model.leadTimeDays + ' days';
+}
+
+function saveConfiguration() {
+  if (!currentConfig.modelId) {
+    alert('Please select a model first');
+    return;
+  }
+  
+  const configJSON = JSON.stringify(currentConfig, null, 2);
+  const blob = new Blob([configJSON], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `config-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  showToast('💾 Configuration saved to file!');
+}
+
+function addConfigToCart() {
+  if (!currentConfig.modelId) {
+    alert('Please select a model first');
+    return;
+  }
+  
+  const model = CONFIGURATOR_MODELS.find(m => m.id === currentConfig.modelId);
+  const qtyLabel = currentConfig.quantity > 1 ? ` × ${currentConfig.quantity}` : '';
+  const configName = `${model.name} (${currentConfig.width}mm, RAL ${currentConfig.panelColor})${qtyLabel}`;
+  
+  const cartItem = {
+    id: Date.now(),
+    name: configName,
+    price: currentConfig.price,
+    qty: currentConfig.quantity || 1,
+    config: JSON.parse(JSON.stringify(currentConfig))
+  };
+  
+  cart.push(cartItem);
+  updateCart();
+  showToast('✅ Configuration added to cart!');
+  setTimeout(() => showStorefront(), 1000);
+}
+
+// ======= STOREFRONT =======
 function getFiltered() {
   let list = currentFilter === 'All' ? [...products] : products.filter(p => p.category === currentFilter);
   const q = (document.getElementById('searchInput') ? document.getElementById('searchInput').value : '').toLowerCase();
