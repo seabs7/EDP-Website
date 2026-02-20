@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: edp-aps-server
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: APS_CLIENT_ID
+        sync: false
+      - key: APS_CLIENT_SECRET
+        sync: false
+      - key: APS_BUCKET_KEY
+        sync: false
+      - key: APS_REGION
+        value: US
+      - key: APS_ALLOWED_ORIGINS
+        value: http://worldoficecream.com,https://worldoficecream.com,https://www.worldoficecream.com
