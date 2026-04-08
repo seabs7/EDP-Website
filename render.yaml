@@ -1,3 +1,8 @@
+staticSites:
+  - name: edp-website
+    buildCommand: echo done
+    staticPublishPath: public
+
 services:
   - type: web
     name: edp-aps-server
@@ -16,4 +21,4 @@ services:
       - key: APS_REGION
         value: US
       - key: APS_ALLOWED_ORIGINS
-        value: http://worldoficecream.com,https://worldoficecream.com,https://www.worldoficecream.com
+        sync: false
